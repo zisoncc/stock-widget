@@ -1,0 +1,24 @@
+﻿# Rust / Cargo
+/target
+*.pdb
+
+# 本项目产生的调试/日志文件
+debug_*.txt
+output.log
+run_output.txt
+
+# 编辑器 / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Python 构建辅助脚本缓存
+__pycache__/
+*.pyc

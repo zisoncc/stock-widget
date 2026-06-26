@@ -1,0 +1,5 @@
+﻿// stock_icon.rc - Resource script for the stock widget icon
+#include <windows.h>
+
+// Icon with ID 101 - this will be both the EXE icon and the window icon
+101 ICON "stock_icon.ico"
