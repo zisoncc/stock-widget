@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.1.2 - 2026-06-27
+
+### Changed
+
+- Limited the minimum window opacity to 10% to prevent accidentally making the widget invisible.
+- Clamp old saved opacity values below 10% when loading the app.
+
 ## v0.1.1 - 2026-06-27
 
 ### Fixed

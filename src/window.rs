@@ -45,6 +45,11 @@ const IDC_OPACITY_CANCEL: u32 = 4003;
 const IDC_OPACITY_TEXT: u32 = 4004;
 const OPACITY_DLG_WIDTH: i32 = 340;
 const OPACITY_DLG_HEIGHT: i32 = 140;
+const MIN_OPACITY: u8 = 26;
+
+fn clamp_opacity(opacity: u8) -> u8 {
+    opacity.max(MIN_OPACITY)
+}
 
 struct InputDialogParams {
     prompt: String,
@@ -85,8 +90,9 @@ pub struct StockWindow {
 }
 
 impl StockWindow {
-    pub fn new(hinstance: HINSTANCE, config: AppConfig) -> Self {
-        let opacity_val = config.opacity;
+    pub fn new(hinstance: HINSTANCE, mut config: AppConfig) -> Self {
+        let opacity_val = clamp_opacity(config.opacity);
+        config.opacity = opacity_val;
         let window_width = config.window.width as i32;
         Self {
             hwnd: HWND::default(),
@@ -514,6 +520,7 @@ impl StockWindow {
 
     fn show_opacity_dialog(&self, current_opacity: u8) -> Option<u8> {
         let hwnd_owner = self.hwnd;
+        let current_opacity = clamp_opacity(current_opacity);
 
         // Register dialog window class (once)
         let class_name = "OpacityDialogClass";
@@ -607,9 +614,9 @@ impl StockWindow {
             }
         };
 
-        // Set trackbar range (0 = transparent to 255 = fully opaque) and initial position
+        // Set trackbar range (10% to fully opaque) and initial position.
         unsafe {
-            SendMessageW(trackbar_hwnd, TBM_SETRANGEMIN, WPARAM(1), LPARAM(0));
+            SendMessageW(trackbar_hwnd, TBM_SETRANGEMIN, WPARAM(1), LPARAM(MIN_OPACITY as isize));
             SendMessageW(trackbar_hwnd, TBM_SETRANGEMAX, WPARAM(1), LPARAM(255));
             SendMessageW(trackbar_hwnd, TBM_SETPOS, WPARAM(1), LPARAM(current_opacity as isize));
         }
@@ -688,14 +695,15 @@ impl StockWindow {
                 let data = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut OpacityDlgData;
                 if !data.is_null() {
                     let pos = SendMessageW((*data).trackbar_hwnd, TBM_GETPOS, WPARAM(0), LPARAM(0));
-                    let pct = (pos.0 as u32 * 100 + 127) / 255;
+                    let opacity = clamp_opacity(pos.0 as u8);
+                    let pct = (opacity as u32 * 100 + 127) / 255;
                     let text = format!("透明度: {}%", pct);
                     let w: Vec<u16> = text.encode_utf16().chain([0]).collect();
                     let _ = SetWindowTextW((*data).text_hwnd, PCWSTR(w.as_ptr()));
 
                     // Preview opacity on main window
                     let win = &*(*data).stock_window;
-                    let _ = SetLayeredWindowAttributes(win.get_hwnd(), COLORREF(0), pos.0 as u8, LWA_ALPHA);
+                    let _ = SetLayeredWindowAttributes(win.get_hwnd(), COLORREF(0), opacity, LWA_ALPHA);
                 }
                 LRESULT(0)
             }
@@ -706,7 +714,7 @@ impl StockWindow {
                     if !data.is_null() {
                         if id == IDC_OPACITY_OK {
                             let pos = SendMessageW((*data).trackbar_hwnd, TBM_GETPOS, WPARAM(0), LPARAM(0));
-                            (*data).result.set(Some(pos.0 as u8));
+                            (*data).result.set(Some(clamp_opacity(pos.0 as u8)));
                         } else {
                             // Cancel: restore original opacity on main window
                             let win = &*(*data).stock_window;
@@ -758,8 +766,9 @@ impl StockWindow {
                 }
             }
             IDM_ADJUST_OPACITY => {
-                let current = self.opacity.get();
+                let current = clamp_opacity(self.opacity.get());
                 if let Some(new_opacity) = self.show_opacity_dialog(current) {
+                    let new_opacity = clamp_opacity(new_opacity);
                     self.opacity.set(new_opacity);
                     unsafe { let _ = SetLayeredWindowAttributes(self.hwnd, COLORREF(0), new_opacity, LWA_ALPHA); }
                     {
